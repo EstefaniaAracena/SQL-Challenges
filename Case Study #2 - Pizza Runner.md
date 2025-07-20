@@ -326,57 +326,121 @@ order by day
 ## B. Runner and Customer Experience
 ### Question 1: How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
 - Code:
-```
-
-```
 - Result:
-
+#### This question will be answered soon...
 
 ### Question 2: What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
 - Code:
 ```
-
+SELECT runner_id, round(avg(aveg)) as avg
+FROM (
+  SELECT order_id, runner_id, avg(CAST(duration AS INTEGER)) as aveg
+  FROM seraphic-ripple-464915-d1.Pizza_Runner.data
+  where pickup_time is not null
+  group by order_id, runner_id
+  order by runner_id
+)
+group by runner_id
 ```
 - Result:
 
+|runner_id|	avg|
+|---|---|
+|1|	22.0|
+|2|	27.0|
+|3|	15.0|
 
 ### Question 3: Is there any relationship between the number of pizzas and how long the order takes to prepare?
 - Code:
 ```
-
+SELECT no_pizzas, avg(preparation_time) as prep_time
+FROM (
+  SELECT order_id, count(order_id) as no_pizzas, avg((order_date - cast(pickup_time AS DATETIME))) as  preparation_time
+  FROM seraphic-ripple-464915-d1.Pizza_Runner.data
+  where pickup_time is not null
+  group by order_id
+  order by preparation_time
+)
+group by no_pizzas
 ```
 - Result:
 
+|no_pizzas|	prep_time|
+|---|---|
+|1|	0-0 0 -0:12:21.400|
+|2|	0-0 0 -0:18:22.500|
+|3|	0-0 0 -0:29:17|
+
+Yes, it is related the number of pizzas with the preparation time. 
 
 ### Question 4: What was the average distance travelled for each customer?
 - Code:
 ```
-
+SELECT customer_id, round(avg(cast(distance as decimal)),2) as distance
+FROM seraphic-ripple-464915-d1.Pizza_Runner.data
+where distance is not null
+group by customer_id
 ```
 - Result:
 
+|customer_id|	distance|
+|---|---|
+|101|	20|
+|102|	16.73|
+|103|	23.4|
+|104|	10|
+|105|	25|
 
 ### Question 5: What was the difference between the longest and shortest delivery times for all orders?
 - Code:
 ```
-
+select max(cast(distance as decimal)) - min(cast(distance as decimal)) as diff
+from seraphic-ripple-464915-d1.Pizza_Runner.data
+where cancellation is null
 ```
 - Result:
 
+|diff|
+|---|
+|15|
 
 ### Question 6: What was the average speed for each runner for each delivery and do you notice any trend for these values?
 - Code:
 ```
-
+SELECT runner_id, round(avg(vel*60),2) as velocity_km_hour
+FROM (
+  select runner_id, order_id, avg((cast(distance as decimal)) / (cast(duration as integer))) as vel
+  from seraphic-ripple-464915-d1.Pizza_Runner.data
+  where cancellation is null
+  group by order_id, runner_id
+  order by runner_id
+)
+group by runner_id
 ```
 - Result:
 
+|runner_id|	velocity_km_hour|
+|---|---|
+|1|	45.54|
+|2|	62.9|
+|3|	40|
 
 ### Question 7: What is the successful delivery percentage for each runner?
 - Code:
 ```
-
+select runner_id, round(sum(cancellations_null)/(sum(cancellations_null)+ sum(cancellations_not_null))*100,2) as delivery_percentage
+FROM (
+  select runner_id, order_id,
+  case when cancellation is null then 1 else 0 end as cancellations_null,
+  case when cancellation is not null then 1 else 0 end as cancellations_not_null
+  from seraphic-ripple-464915-d1.Pizza_Runner.data
+)
+group by runner_id
 ```
 - Result:
 
-
+|runner_id|	delivery_percentage|
+|---|---|
+|1|	100.0|
+|2|	83.33|
+|3|	50.0|
