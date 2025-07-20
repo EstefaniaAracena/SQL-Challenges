@@ -444,3 +444,112 @@ group by runner_id
 |1|	100.0|
 |2|	83.33|
 |3|	50.0|
+
+### C. Ingredient Optimisation
+Now, the third part is mostly focused on the ingredients. As you saw, the table "pizza_toppings" doesn't have a nice layout, for that reason, first let's unnest it as save it as pizza_tops: 
+```
+select DISTINCT pizza_id, cast(toppings as integer) as topping_id
+FROM seraphic-ripple-464915-d1.Pizza_Runner.pizza_recipes, 
+UNNEST(split(toppings, ',')) toppings
+```
+
+Thenm, we must create a join with all the pizza information related to ingredients as we save it as data_pizza: 
+```
+SELECT pn.pizza_id, pn.pizza_name, pr.topping_id, pt.topping_name
+FROM seraphic-ripple-464915-d1.Pizza_Runner.pizza_recipes2 as pr 
+join seraphic-ripple-464915-d1.Pizza_Runner.pizza_name as pn
+ON pr.pizza_id = pn.pizza_id
+JOIN seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt
+ON pt.topping_id = pr.topping_id
+```
+
+Now, the questions: 
+
+### Question 1: What are the standard ingredients for each pizza?
+- Code:
+```
+SELECT pizza_name, string_agg(topping_name, ',') as ingredients 
+FROM seraphic-ripple-464915-d1.Pizza_Runner.data_pizza
+GROUP BY pizza_name
+```
+- Result:
+
+|pizza_name|	ingredients|
+|---|---|
+|Meat Lovers|	Beef,BBQ Sauce,Salami,Cheese,Pepperoni,Mushrooms,Chicken,Bacon|
+|Vegetarian|	Peppers,Tomato Sauce,Mushrooms,Onions,Cheese,Tomatoes|
+
+### Question 2: What was the most commonly added extra?
+- Code:
+```
+SELECT * 
+FROM (
+  SELECT extras_id, count(extras_id) as count
+  FROM (
+    SELECT pizza_id, cast(extras as integer) as extras_id
+    FROM seraphic-ripple-464915-d1.Pizza_Runner.data,
+    UNNEST(split(extras, ',')) extras
+    where extras is not null) as temp
+    group by extras_id) as temp2
+join seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt
+on pt.topping_id = temp2.extras_id
+ORDER BY count DESC 
+LIMIT 1 
+```
+- Result:
+
+|extras_id|	count	|topping_id|	topping_name|
+|---|---|---|---|
+|	1	|4	|1	|Bacon|
+
+### Question 3: What was the most common exclusion?
+- Code:
+```
+SELECT * 
+FROM (
+  SELECT exclusions_id, count(exclusions_id) as count
+  FROM (
+    SELECT pizza_id, cast(exclusions as integer) as exclusions_id
+    FROM seraphic-ripple-464915-d1.Pizza_Runner.data,
+    UNNEST(split(exclusions, ',')) exclusions
+    where exclusions is not null) as temp
+    group by exclusions_id) as temp2
+join seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt
+on pt.topping_id = temp2.exclusions_id
+ORDER BY count DESC 
+LIMIT 1 
+```
+- Result:
+
+|exclusions_id|	count|	topping_id|	topping_name|
+|---|---|---|---|
+|4|	4|	4|	Cheese|
+
+### Question 4: Generate an order item for each record in the customers_orders table in the format of one of the following:
+Meat Lovers
+Meat Lovers - Exclude Beef
+Meat Lovers - Extra Bacon
+Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
+
+- Code:
+```
+```
+- Result:
+
+
+### Question 5: Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
+For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
+
+- Code:
+```
+```
+- Result:
+
+
+### Question 6: What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
+- Code:
+```
+```
+- Result:
+
+
