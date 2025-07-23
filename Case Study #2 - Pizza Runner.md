@@ -526,16 +526,97 @@ LIMIT 1
 |4|	4|	4|	Cheese|
 
 ### Question 4: Generate an order item for each record in the customers_orders table in the format of one of the following:
-Meat Lovers
-Meat Lovers - Exclude Beef
-Meat Lovers - Extra Bacon
-Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
+* Meat Lovers
+* Meat Lovers - Exclude Beef
+* Meat Lovers - Extra Bacon
+* Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
 
 - Code:
 ```
+with exclusions1 as (
+  SELECT _id, customer_id, order_id, pizza_id, exclusions, topping_name as exc_top
+  FROM
+    (SELECT _id, customer_id, order_id, pizza_id, cast(exclusions as integer) as exclusions
+    FROM (
+    SELECT ROW_NUMBER() OVER () AS _id, data.customer_id, data.order_id, data.pizza_id, exclusions
+    FROM seraphic-ripple-464915-d1.Pizza_Runner.data
+    ),
+    UNNEST(split(exclusions, ',')) exclusions) as tem
+  LEFT JOIN seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt 
+  ON tem.exclusions = pt.topping_id), 
+
+extras1 as (
+  SELECT _id, customer_id, order_id, pizza_id, extras, topping_name as ext_top
+  FROM
+    (SELECT _id, customer_id, order_id, pizza_id, cast(extras as integer) as extras
+    FROM (
+    SELECT ROW_NUMBER() OVER () AS _id, data.customer_id, data.order_id, data.pizza_id, extras
+    FROM seraphic-ripple-464915-d1.Pizza_Runner.data
+    ),
+    UNNEST(split(extras, ',')) extras) as tem
+  LEFT JOIN seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt 
+  ON tem.extras = pt.topping_id
+),
+
+data1 as (
+  SELECT data._id, data.customer_id, data.order_id, data.pizza_id, extras1.extras, ext_top
+  from (
+    SELECT ROW_NUMBER() OVER () AS _id, data.customer_id, data.order_id, data.pizza_id, exclusions, extras
+    from seraphic-ripple-464915-d1.Pizza_Runner.data) as data
+  LEFT JOIN extras1 
+  ON data._id = extras1._id), 
+
+data2 as (
+  select temp._id, temp.order_id, temp.pizza_id, temp.extras, temp.ext_top, temp.exc_top, pizza_name
+  from(
+    SELECT data1._id, data1.customer_id, data1.order_id, data1.pizza_id, data1.extras, exclusions1.exclusions, ext_top, exc_top
+    from data1
+    LEFT JOIN exclusions1 
+    ON data1._id = exclusions1._id) as temp
+  join seraphic-ripple-464915-d1.Pizza_Runner.pizza_name as pn 
+  on temp.pizza_id = pn.pizza_id
+), 
+
+ordenes as (
+  select order_id, orders
+  from (
+    select _id, 
+    case 
+    when exclusions is not null and extras is null then concat(pizza_name, ' - ', 'Exclude ', exclusions)
+    when exclusions is null and extras is not null then concat(pizza_name, ' - ', 'Extra ', extras)
+    when exclusions is not null and extras is not null then concat(pizza_name, ' - ', 'Exclude ', exclusions,' - ', 'Extra ', extras)
+    else pizza_name
+    end as orders
+    from (
+      select _id, pizza_name, string_agg(distinct exc_top, ', ') as exclusions, string_agg(distinct ext_top, ', ') as extras
+      from data2
+      group by _id, pizza_name) ) tem1
+  JOIN (select row_number() over() as _id, order_id
+  from seraphic-ripple-464915-d1.Pizza_Runner.data) as tem2
+  ON tem1._id = tem2._id)
+
+select *
+from ordenes
+order by order_id
 ```
 - Result:
 
+|order_id|	orders|
+|---|---|
+|	1|	Meat Lovers|
+|	2|	Meat Lovers|
+|	3|	Vegetarian|
+|	3|	Meat Lovers|
+|	4|	Meat Lovers - Exclude Cheese|
+|	4|	Vegetarian - Exclude Cheese|
+|	4|	Meat Lovers - Exclude Cheese|
+|	5|	Meat Lovers - Extra Bacon|
+|	6|	Vegetarian|
+|	7|	Vegetarian - Extra Bacon|
+|	8|	Meat Lovers|
+|	9|	Meat Lovers - Exclude Cheese - Extra Bacon, Chicken|
+|	10|	Meat Lovers|
+|	10|	Meat Lovers - Exclude BBQ Sauce, Mushrooms - Extra Bacon, Cheese|
 
 ### Question 5: Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
 For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
