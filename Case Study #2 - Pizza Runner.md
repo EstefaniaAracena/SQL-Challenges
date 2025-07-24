@@ -710,7 +710,71 @@ order by order_id
 ### Question 6: What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
 - Code:
 ```
+with recipes as (
+  select _id, pizza_id, order_id, pizza_name,  top, topping_name
+  from 
+    (select tem1._id, tem1.pizza_id, tem1.order_id, pizza_name, topping_id as top 
+    from (
+      select row_number() over() as _id, data.pizza_id, pn.pizza_name, data.order_id
+      from seraphic-ripple-464915-d1.Pizza_Runner.data as data 
+      join seraphic-ripple-464915-d1.Pizza_Runner.pizza_name as pn 
+      on data.pizza_id = pn.pizza_id) tem1
+    join seraphic-ripple-464915-d1.Pizza_Runner.pizza_recipes2 as tem2
+    on tem1.pizza_id = tem2.pizza_id  ) as tem3
+  join seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt 
+  on tem3.top = pt.topping_id
+  ), 
+
+exclusions1 as (
+  SELECT _id, customer_id, order_id, pizza_id, exclusions, topping_name as exc_name
+  FROM
+    (SELECT _id, customer_id, order_id, pizza_id, cast(exclusions as integer) as exclusions
+    FROM (
+      SELECT ROW_NUMBER() OVER () AS _id, data.customer_id, data.order_id, data.pizza_id, exclusions
+      FROM seraphic-ripple-464915-d1.Pizza_Runner.data ),
+    UNNEST(split(exclusions, ',')) exclusions) as tem
+  LEFT JOIN seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt 
+  ON tem.exclusions = pt.topping_id), 
+
+extras1 as (
+  SELECT _id, customer_id, order_id, pizza_id, extras, topping_name as ext_name
+  FROM
+    (SELECT _id, customer_id, order_id, pizza_id, cast(extras as integer) as extras
+    FROM (
+      SELECT ROW_NUMBER() OVER () AS _id, data.customer_id, data.order_id, data.pizza_id, extras
+      FROM seraphic-ripple-464915-d1.Pizza_Runner.data ),
+    UNNEST(split(extras, ',')) extras) as tem
+  LEFT JOIN seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt 
+  ON tem.extras = pt.topping_id
+), 
+
+ingredients1 as (
+  SELECT recipes._id, topping_name as top 
+  FROM recipes 
+  LEFT JOIN exclusions1 ON recipes._id = exclusions1._id AND recipes.top = exclusions1.exclusions
+  WHERE exclusions1.exclusions IS NULL
+  UNION ALL 
+  SELECT _id, ext_name 
+  FROM extras1)
+
+select top, count(top) as topping
+from ingredients1
+group by top
+order by topping DESC
 ```
 - Result:
 
-
+|top|	topping|
+|---|---|
+|	Bacon|	14|
+|	Mushrooms|	13|
+|	Chicken|	11|
+|	Cheese|	11|
+|	Beef|	10|
+|	Pepperoni|	10|
+|	Salami|	10|
+|	BBQ Sauce|	9|
+|	Tomatoes|	4|
+|	Onions|	4|
+|	Peppers|	4|
+|	Tomato Sauce|	4|
