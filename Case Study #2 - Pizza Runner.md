@@ -623,9 +623,89 @@ For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
 
 - Code:
 ```
+with recipes as (
+  select _id, pizza_id, order_id, pizza_name,  top, topping_name
+  from 
+    (select tem1._id, tem1.pizza_id, tem1.order_id, pizza_name, topping_id as top 
+    from (
+      select row_number() over() as _id, data.pizza_id, pn.pizza_name, data.order_id
+      from seraphic-ripple-464915-d1.Pizza_Runner.data as data 
+      join seraphic-ripple-464915-d1.Pizza_Runner.pizza_name as pn 
+      on data.pizza_id = pn.pizza_id) tem1
+    join seraphic-ripple-464915-d1.Pizza_Runner.pizza_recipes2 as tem2
+    on tem1.pizza_id = tem2.pizza_id  ) as tem3
+  join seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt 
+  on tem3.top = pt.topping_id
+  ), 
+
+exclusions1 as (
+  SELECT _id, customer_id, order_id, pizza_id, exclusions, topping_name as exc_name
+  FROM
+    (SELECT _id, customer_id, order_id, pizza_id, cast(exclusions as integer) as exclusions
+    FROM (
+      SELECT ROW_NUMBER() OVER () AS _id, data.customer_id, data.order_id, data.pizza_id, exclusions
+      FROM seraphic-ripple-464915-d1.Pizza_Runner.data ),
+    UNNEST(split(exclusions, ',')) exclusions) as tem
+  LEFT JOIN seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt 
+  ON tem.exclusions = pt.topping_id), 
+
+extras1 as (
+  SELECT _id, customer_id, order_id, pizza_id, extras, topping_name as ext_name
+  FROM
+    (SELECT _id, customer_id, order_id, pizza_id, cast(extras as integer) as extras
+    FROM (
+      SELECT ROW_NUMBER() OVER () AS _id, data.customer_id, data.order_id, data.pizza_id, extras
+      FROM seraphic-ripple-464915-d1.Pizza_Runner.data ),
+    UNNEST(split(extras, ',')) extras) as tem
+  LEFT JOIN seraphic-ripple-464915-d1.Pizza_Runner.pizza_toppings as pt 
+  ON tem.extras = pt.topping_id
+), 
+
+ingredients1 as (
+    SELECT 
+    recipes._id, recipes.pizza_id,
+    CASE WHEN extras1.extras IS NOT NULL THEN concat('2x ', CAST(recipes.topping_name AS STRING)) ELSE CAST(recipes.topping_name AS STRING) END AS top
+  FROM recipes 
+  LEFT JOIN extras1
+  ON recipes._id = extras1._id AND recipes.top = extras1.extras
+), 
+
+ingredients2 as (
+    SELECT i1._id, top
+    FROM ingredients1 as i1
+  LEFT JOIN exclusions1 
+   ON i1._id = exclusions1 ._id AND i1.pizza_id = exclusions1.pizza_id AND i1.top = exclusions1.exc_name
+  WHERE exclusions1.exc_name IS NULL )
+
+select order_id, recipe
+from (
+  SELECT _id, string_agg(top, ', ') as recipe
+  from ingredients2
+  group by _id) as tem1
+join (
+  select row_number() over() as _id, order_id
+  from seraphic-ripple-464915-d1.Pizza_Runner.data ) as tem2
+on tem1._id = tem2._id
+order by order_id
 ```
 - Result:
 
+|order_id|	recipe|
+|---|---|
+|	1|	Chicken, Beef, Pepperoni, Cheese, Salami, BBQ Sauce, Mushrooms, Bacon|
+|	2|	Chicken, Beef, Pepperoni, Cheese, Salami, BBQ Sauce, Mushrooms, Bacon|
+|	3|	Tomatoes, Cheese, Onions, Peppers, Mushrooms, Tomato Sauce|
+|	3|	Chicken, Beef, Pepperoni, Cheese, Salami, BBQ Sauce, Mushrooms, Bacon|
+|	4|	Chicken, Beef, Pepperoni, Salami, BBQ Sauce, Mushrooms, Bacon|
+|	4|	Tomatoes, Onions, Peppers, Mushrooms, Tomato Sauce|
+|	4|	Chicken, Beef, Pepperoni, Salami, BBQ Sauce, Mushrooms, Bacon|
+|	5|	Chicken, Beef, Pepperoni, Cheese, Salami, BBQ Sauce, Mushrooms, 2x Bacon|
+|	6|	Tomatoes, Cheese, Onions, Peppers, Mushrooms, Tomato Sauce|
+|	7|	Tomatoes, Cheese, Onions, Peppers, Mushrooms, Tomato Sauce|
+|	8|	Chicken, Beef, Pepperoni, Cheese, Salami, BBQ Sauce, Mushrooms, Bacon|
+|	9|	2x Chicken, Beef, Pepperoni, Salami, BBQ Sauce, Mushrooms, 2x Bacon|
+|	10|	Chicken, Beef, Pepperoni, Cheese, Salami, BBQ Sauce, Mushrooms, Bacon|
+|	10|	Chicken, Beef, Pepperoni, 2x Cheese, Salami, 2x Bacon|
 
 ### Question 6: What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
 - Code:
