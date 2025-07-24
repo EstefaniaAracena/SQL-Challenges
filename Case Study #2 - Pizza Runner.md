@@ -869,3 +869,14 @@ order by order_id
 |	104|	10|	1|	4|	2020-01-11T18:34:49|	2020-01-11 18:50:20|	15|	10|	60.0|	2|
 
 ### Question 5: If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
+- Code:
+```
+select sum(case when pizza_id=1 then 12 else 10 end) - round(sum(cast(distance as float64)) * 0.3, 2) as left_amount
+from seraphic-ripple-464915-d1.Pizza_Runner.data
+where cancellation is null
+```
+- Result:
+
+|left_amount|
+|---|
+|	73.38|
