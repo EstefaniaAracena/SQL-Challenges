@@ -780,6 +780,7 @@ order by topping DESC
 |	Tomato Sauce|	4|
 
 ### D. Pricing and Ratings
+Now we will walk through part D: 
 
 ### Question 1: If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
 - Code:
@@ -814,3 +815,57 @@ where cancellation is null
 |total_amount|
 |---|
 |	142|
+
+### Question 3: The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
+- Code: 
+```
+CREATE TABLE seraphic-ripple-464915-d1.Pizza_Runner.ratings(
+  order_id integer,
+  runner_id integer,
+  rating integer, 
+  feedback string
+); 
+
+INSERT INTO seraphic-ripple-464915-d1.Pizza_Runner.ratings(order_id, runner_id, rating, feedback)
+VALUES 
+(6, 3, 1, 'awfull, they cancelled my order'),
+(10, 2, 4, 'great but I have to order extra cheese all the time'),
+(3, 1, 5, 'great pizza, came really fast'); 
+
+SELECT * 
+FROM seraphic-ripple-464915-d1.Pizza_Runner.ratings
+```
+
+- Result:
+
+|order_id|	runner_id|	rating|	feedback|
+|---|---|---|---|
+|	6|	3|	1|	awfull, they cancelled my order|
+|	10|	2|	4|	great but I have to order extra cheese all the time|
+|	3|	1|	5|	great pizza, came really fast|
+
+### Question 4: Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries? 
+- Code:
+```
+SELECT customer_id, data.order_id, data.runner_id, rating, order_date, pickup_time,  extract(minute from (cast(pickup_time as datetime)-order_date)) as time_to_deliver, duration, round(cast(distance as float64)/cast(duration as integer)*60,2) as Average_speed_km_hour, count(pizza_id) as number_of_pizzas
+FROM seraphic-ripple-464915-d1.Pizza_Runner.data as data
+LEFT JOIN seraphic-ripple-464915-d1.Pizza_Runner.rating as rt
+ON data.order_id = rt.order_id
+where cancellation is null
+group by customer_id, data.order_id, data.runner_id, rating, order_date, pickup_time, time_to_deliver, duration, Average_speed_km_hour
+order by order_id
+```
+- Result:
+
+|customer_id|	order_id|	runner_id|	rating|	order_date|	pickup_time|	time_to_deliver|	duration|	Average_speed_km_hour|	number_of_pizzas|
+|---|---|---|---|---|---|---|---|---|---|
+|	101|	1|	1|	null|	2020-01-01T18:05:02|	2020-01-01 18:15:34|	10|	32|	37.5|	1|
+|	101|	2|	1|	null|	2020-01-01T19:00:52|	2020-01-01 19:10:54|	10|	27|	44.44|	1|
+|	102|	3|	1|	5|	2020-01-02T23:51:23|	2020-01-03 00:12:37|	21|	20|	40.2|	2|
+|	103|	4|	2|	null|	2020-01-04T13:23:46|	2020-01-04 13:53:03|	29|	40|	35.1|	3|
+|	104|	5|	3|	null|	2020-01-08T21:00:29|	2020-01-08 21:10:57|	10|	15|	40.0|	1|
+|	105|	7|	2|	null|	2020-01-08T21:20:29|	2020-01-08 21:30:45|	10|	25|	60.0|	1|
+|	102|	8|	2|	null|	2020-01-09T23:54:33|	2020-01-10 00:15:02|	20|	15|	93.6|	1|
+|	104|	10|	1|	4|	2020-01-11T18:34:49|	2020-01-11 18:50:20|	15|	10|	60.0|	2|
+
+### Question 5: If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
