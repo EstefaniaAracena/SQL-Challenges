@@ -778,3 +778,39 @@ order by topping DESC
 |	Onions|	4|
 |	Peppers|	4|
 |	Tomato Sauce|	4|
+
+### D. Pricing and Ratings
+
+### Question 1: If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
+- Code:
+```
+select sum(case when pizza_id=1 then 12 else 10 end) as total_amount
+from seraphic-ripple-464915-d1.Pizza_Runner.data
+where cancellation is null
+```
+- Result:
+
+|total_amount|
+|---|
+|	138|
+
+### Question 2: What if there was an additional $1 charge for any pizza extras?
+- Code:
+```
+SELECT sum(case when pizza_id = 1 then 12 else 10 end) + sum(ext) as total_amount
+FROM (
+  select row_number() over() as _id, data.order_id, pizza_id, data.cancellation
+  from seraphic-ripple-464915-d1.Pizza_Runner.data) as data
+LEFT JOIN (
+  SELECT row_number() over() as _id, count(*) as ext
+  FROM seraphic-ripple-464915-d1.Pizza_Runner.data, 
+  UNNEST(split(extras, ',')) extras
+  where cancellation is null) as extras
+ON data._id = extras._id
+where cancellation is null
+```
+- Result:
+
+|total_amount|
+|---|
+|	142|
