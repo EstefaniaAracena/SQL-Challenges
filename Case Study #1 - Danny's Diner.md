@@ -1,5 +1,7 @@
 # Case Study #1 - Danny's Diner.md
-First we create the tables, then, we analize the data: 
+You can find the case study [here](https://8weeksqlchallenge.com/case-study-1/).
+
+Danny seriously loves Japanese so he opens up a cute little restaurant that sells his 3 favourite foods: sushi, curry and ramen. Danny’s Diner is in need of your assistance to help the restaurant stay afloat - the restaurant has captured some very basic data from their few months of operation but have no idea how to use their data to help them run the business. First we create the tables, then, we analize the data: 
 
 ## Create the tables: 
 ```
