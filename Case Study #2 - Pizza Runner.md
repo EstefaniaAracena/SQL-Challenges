@@ -1,5 +1,8 @@
 # Case Study #2 - Pizza Runner
-First we create the tables, then, we analize the data:
+
+You can find the case study [here](https://8weeksqlchallenge.com/case-study-2/).
+
+Danny has a new business called Pizza Runner, a pizza delivery and he decided to hire some "runners". Lets check some data he collected. First we create the tables, then, we analize the data:
 
 ## Create the tables: 
 ### runners
