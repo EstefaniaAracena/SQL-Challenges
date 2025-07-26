@@ -119,27 +119,53 @@ group by plan_name
 - Result:
 
 |plan_name|	unsubscriptions|	churn_rate|
+|---|---|---|
 |	churn|	307|	30.7|
 
 ### Question 5: How many customers have churned straight after their initial free trial - what percentage is this rounded to the nearest whole number?
 - Code:
 ```
+select count(*) as didnt_subscribed, (count(*)/10) as rate
+FROM ( 
+SELECT customer_id, sum(price) as paid
+from seraphic-ripple-464915-d1.Foodie_Fi.data
+group by customer_id )
+where paid = 0
+-- as we now, there are 1000 customers so to calculate rate we divide the count by 1000 and the multiply by 100, 100/1000=10
 ```
 - Result:
 
+|didnt_subscribed|	rate|
+|---|---|
+|	92|	9.2|
 
 ### Question 6: What is the number and percentage of customer plans after their initial free trial?
 - Code:
 ```
+select plan_id, plan_name, count(*) as members, count(*)/10 as percentage
+from (
+  select data.*, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY start_date) AS rn
+from seraphic-ripple-464915-d1.Foodie_Fi.data as data)
+where rn=2
+group by plan_id, plan_name
+order by plan_id
+-- as we now, there are 1000 customers so to calculate rate we divide the count by 1000 and the multiply by 100, 100/1000=10
 ```
 - Result:
 
+|plan_id|	plan_name|	members|	percentage|
+|---|---|---|---|
+|	1|	basic monthly|	546|	54.6|
+|	2|	pro monthly|	325|	32.5|
+|	3|	pro annual|	37|	3.7|
+|	4|	churn|	92|	9.2|
 
 ### Question 7: What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
 - Code:
 ```
 ```
 - Result:
+
 
 
 ### Question 8: How many customers have upgraded to an annual plan in 2020?
