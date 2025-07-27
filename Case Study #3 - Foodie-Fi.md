@@ -163,35 +163,109 @@ order by plan_id
 ### Question 7: What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
 - Code:
 ```
+SELECT plan_id, plan_name, count(*) as members, ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) AS percentage
+FROM(
+  select data.*, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY start_date DESC) AS rn
+  from seraphic-ripple-464915-d1.Foodie_Fi.data as data
+  where start_date <= '2020-12-31')
+WHERE rn = 1
+GROUP BY plan_id, plan_name 
+ORDER BY plan_id
 ```
 - Result:
 
-
+|plan_id|	plan_name|	members|	percentage|
+|---|---|---|---|
+|	0|	trial|	19|	1.9|
+|	1|	basic monthly|	224|	22.4|
+|	2|	pro monthly|	326|	32.6|
+|	3|	pro annual|	195|	19.5|
+|	4|	churn|	236|	23.6|
 
 ### Question 8: How many customers have upgraded to an annual plan in 2020?
 - Code:
 ```
+SELECT count(*) as pro_annual_plan_members
+FROM seraphic-ripple-464915-d1.Foodie_Fi.data
+WHERE plan_name = 'pro annual' and start_date <= '2020-12-31'
 ```
 - Result:
 
+|pro_annual_plan_members|
+|---|
+|	195|
 
 ### Question 9: How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?
 - Code:
 ```
+SELECT extract(day from avg(next_date - start_date) ) as average
+FROM(    
+    select data.*, 
+    LEAD(start_date, 1) OVER (PARTITION BY customer_id ORDER BY start_date) AS next_date
+    FROM seraphic-ripple-464915-d1.Foodie_Fi.data as data
+    where plan_id in (0,3))
 ```
 - Result:
+
+|average|
+|---|
+|104|
 
 
 ### Question 10: Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)
 - Code:
 ```
+WITH datos AS (
+  select extract( day from (next_date - start_date)) as days
+ FROM (
+    select data.*, 
+    LEAD(start_date, 1) OVER (PARTITION BY customer_id ORDER BY start_date) AS next_date
+    FROM seraphic-ripple-464915-d1.Foodie_Fi.data as data
+    where plan_id in (0,3))),
+
+grupos AS (
+  SELECT FLOOR(days / 30) AS grupo_30,COUNT(*) AS total
+  FROM datos
+  WHERE days IS NOT NULL
+  GROUP BY grupo_30
+)
+
+SELECT concat(grupo_30 * 30 + 1, ' - ', (grupo_30 + 1) * 30 ) as ciclo, total
+FROM grupos
+ORDER BY grupo_30;
+
 ```
 - Result:
 
+|ciclo|	total|
+|---|---|
+|	1 - 30|	48|
+|	31 - 60|	25|
+|	61 - 90|	33|
+|	91 - 120|	35|
+|	121 - 150|	43|
+|	151 - 180|	35|
+|	181 - 210|	27|
+|	211 - 240|	4|
+|	241 - 270|	5|
+|	271 - 300|	1|
+|	301 - 330|	1|
+|	331 - 360|	1|
 
 ### Question 11: How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
 - Code:
 ```
+select count(*) as customers_downgraded
+from (
+    select data.*, 
+    LEAD(plan_id, 1) OVER (PARTITION BY customer_id ORDER BY start_date) AS next_plan_id
+    FROM seraphic-ripple-464915-d1.Foodie_Fi.data as data
+    where plan_id in (1,2))
+where next_plan_id = 1
 ```
 - Result:
+
+|customers_downgraded|
+|---|
+|0|
 
